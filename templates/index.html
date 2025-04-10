@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload and Table Creation</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/dropzone@5.9.3/dist/min/dropzone.min.css" rel="stylesheet" />
+    
+    <style>
+        /* Custom Styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fa;
+            padding: 40px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .dropzone {
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            padding: 50px;
+            background: #f9f9f9;
+            text-align: center;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .dropzone:hover {
+            background-color: #e9f7fe;
+            border-color: #0056b3;
+        }
+
+        .dropzone .dz-message {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .dz-preview {
+            display: none;
+        }
+
+        .alert {
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .alert-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .alert-error {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .submit-btn {
+            display: block;
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 30px;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f7fa;
+        }
+
+        td {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Upload Excel File</h1>
+
+        <form action="UPLOAD_FOLDER" class="dropzone" id="my-dropzone"></form>
+
+        <button class="submit-btn" id="create-table-btn">Submit & Create Table</button>
+
+        <!-- Alerts for feedback -->
+        <div id="alert-container"></div>
+
+        <!-- Table to display data from database -->
+        <h2>Table Data</h2>
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/dropzone@5.9.3/dist/min/dropzone.min.js"></script>
+
+    <script>
+        // Fetch data from the server and populate the table
+        function fetchTableData() {
+            fetch('/get-table-data')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('data-table').getElementsByTagName('tbody')[0];
+                    tableBody.innerHTML = '';  // Clear the table before adding new rows
+
+                    data.forEach(item => {
+                        const row = tableBody.insertRow();
+                        row.insertCell(0).textContent = item.name;
+                        row.insertCell(1).textContent = item.date;
+                        row.insertCell(2).textContent = item.status;
+                    });
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // Call fetchTableData when the page loads
+        window.onload = fetchTableData;
+
+        // Dropzone initialization
+        Dropzone.options.myDropzone = {
+            paramName: "file",
+            maxFilesize: 20,
+            acceptedFiles: ".xlsx",
+            dictDefaultMessage: "Drag and drop an Excel file here or click to select one",
+            init: function () {
+                this.on("success", function (file, response) {
+                    console.log("Upload successful:", response);
+                    showAlert('Upload successful!', 'success');
+                    fetchTableData();  // Re-fetch table data after successful upload
+                });
+                this.on("error", function (file, response) {
+                    console.log("Upload failed:", response);
+                    showAlert('Upload failed: ' + response, 'error');
+                });
+            }
+        };
+
+        // Function to show alert messages
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-' + type;
+            alert.innerHTML = message;
+            alertContainer.appendChild(alert);
+            setTimeout(() => {
+                alertContainer.removeChild(alert);
+            }, 5000);
+        }
+
+        // Submit button click event
+        document.getElementById('create-table-btn').addEventListener('click', function() {
+            fetch('/create_table', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Table created successfully!', 'success');
+                } else {
+                    showAlert('Failed to create table.', 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Error: ' + error, 'error');
+            });
+        });
+    </script>
+</body>
+</html>
